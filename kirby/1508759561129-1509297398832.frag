@@ -5,10 +5,6 @@
 precision mediump float;
 #endif
 
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_time;
-
 #define STEPS 50.
 #define VOLUME .01
 #define FAR 10.
@@ -61,7 +57,7 @@ const vec3 green2 = vec3(0.038,0.260,0.047);
 Shape sdKirby (vec3 pos) {
     Shape kirby = newShape();
     vec3 p;
-    
+
     // foot
     p = pos;
     p.x = abs(p.x)-.4;
@@ -70,18 +66,18 @@ Shape sdKirby (vec3 pos) {
     p.z *= .65;
     float foot = sdSphere(p, .4);
     foot = smax(foot, -p.y, .2);
-    
+
     // breath animation
     float wave = .5+.5*sin(u_time*5.);
     pos.y += 1.;
     pos.y *= 1.+.1*wave;
     pos.y -= 1.;
     pos.xz *= 1.-.1*wave;
-    
+
     // body
     p = pos;
     float body = sdSphere(p, 1.);
-    
+
     // hand
     p = pos;
     p.x = abs(p.x)-1.;
@@ -89,12 +85,12 @@ Shape sdKirby (vec3 pos) {
     p.x *= .75;
     p.y *= 1.5;
     float hand = sdSphere(p, .4);
-    
+
     // body compo
     kirby.dist = min(min(body, foot), hand);
     kirby.color = mix(pink, red, step(foot, body));
     kirby.spec = 1.;
-    
+
     // eyes
     p = pos;
     p.y -= .3;
@@ -110,7 +106,7 @@ Shape sdKirby (vec3 pos) {
     p.x *= .75;
     p.y *= .4;
     kirby.color = mix(kirby.color, blue, clamp(-p.y*10.,0.,1.)*step(length(p.xy), .1));
-    
+
     // open mouth
     p = pos;
     p.x *= .5;
@@ -119,14 +115,14 @@ Shape sdKirby (vec3 pos) {
     float mouth = step(d, .1);
     kirby.color = mix(kirby.color, red, mouth);
     kirby.color = mix(kirby.color, red*.1, mouth*(1.-clamp(-p.y*10.+.5,0.,1.)));
-    
+
     // cheeks
     p = pos;
     p.x = abs(p.x) - .5;
     p *= 6.;
     p.x *= .75;
     kirby.color = mix(kirby.color, red, .75*(1.-smoothstep(0.5,1.,length(p.xy))));
-    
+
     return kirby;
 }
 
@@ -140,7 +136,7 @@ Shape sdGround (vec3 pos) {
     p.xz = repeat(p.xz, cell);
     p.y += 1. + height;
     ground.dist = smin(p.y, sdBox(p, vec3(cell*padding, height, cell*padding)), .2);
-    
+
     p = pos;
     p.xz = repeat(p.xz+cell/2., cell);
     float r = abs(p.x*p.z)*.9+.1;
