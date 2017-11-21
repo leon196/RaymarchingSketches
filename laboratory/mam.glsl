@@ -6,6 +6,15 @@
 #define PI 3.14159
 #define TAU (2.*PI)
 #define time iGlobalTime
+
+
+#define donut 30.
+#define cell 4.
+#define height 2.
+#define thin .04
+#define radius 15.
+#define speed 1.
+
 float rng (vec2 seed) { return fract(sin(dot(seed*.1684,vec2(54.649,321.547)))*450315.); }
 mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
 float sdSphere (vec3 p, float r) { return length(p)-r; }
@@ -59,15 +68,8 @@ void orbit (inout vec3 p) {
 }
 
 void camera (inout vec3 p) {
-	p.yz *= rot(PI/8.);
-}
-
-void applyDonut (inout vec3 pos, float donut, float radius, float cell, float thin) {
-	pos.x += donut;
-	pos.y += radius;
-	pos.xz = displaceLoop(pos.xz, donut);
-	pos.z *= donut;
-	pos.xzy = pos.xyz;
+  p.xz *= rot(PI/8.);
+	p.yz *= rot(PI/6.);
 }
 
 // width,height,thin,depth
@@ -84,47 +86,61 @@ float windowCross (vec3 pos, vec4 size, float salt) {
 }
 
 float window (vec3 pos, vec2 dimension, float salt) {
-  float width = dimension.x;
-  float height = dimension.y;
-  float thin = .008;
+  float thinn = .008;
   float depth = .04;
   float depthCadre = .06;
   float padding = .08;
-  float scene = windowCross(pos, vec4(width,height,thin,depth), salt);
-  float cadre = sdBox(pos, vec3(width, height, depthCadre));
-  cadre = max(cadre, -sdBox(pos, vec3(width-padding, height-padding, depthCadre*2.)));
+  float scene = windowCross(pos, vec4(dimension,thinn,depth), salt);
+  float cadre = sdBox(pos, vec3(dimension, depthCadre));
+  cadre = max(cadre, -sdBox(pos, vec3(dimension.x-padding, dimension.y-padding, depthCadre*2.)));
   scene = min(scene, cadre);
   return scene;
 }
 
+float box (vec3 pos, float salt) {
+  vec3 p = pos;
+  float ry = cell * .43*(.3+salt);
+  float rz = cell * .2*(.5+salt);
+  float salty = rng(vec2(floor(pos.y/ry), floor(pos.z/rz)));
+  pos.y = repeat(pos.y, ry);
+  pos.z = repeat(pos.z, rz);
+  float scene = sdBox(pos, vec3(.1+.8*salt+salty,.1+.2*salt,.1+.2*salty));
+  scene = max(scene, sdBox(p, vec3(cell*.2)));
+  return scene;
+}
+
 float map (vec3 pos) {
-  vec3 camOffset = vec3(-3,-0,10.);
+  vec3 camOffset = vec3(-4,0,0.);
 
   float scene = 1000.;
   vec3 p = pos + camOffset;
-	float donut = 30.;
-	float cell = 4.;
-	float height = 1.;
-	float thin = .04;
-	float radius = 15.;
-  float speed = 1.;
 	float segments = PI*radius;
   float indexX, indexY, salt;
   vec2 seed;
+
+  // donut distortion
 	vec3 pDonut = p;
-  applyDonut(pDonut, donut, radius, cell, thin);
+	pDonut.x += donut;
+	pDonut.y += radius;
+	pDonut.xz = displaceLoop(pDonut.xz, donut);
+	pDonut.z *= donut;
+	pDonut.xzy = pDonut.xyz;
+
+  // ground
+  p = pDonut;
+  scene = min(scene, sdCylinder(p.xz, radius-height));
 
 	// walls
 	p = pDonut;
   float py = p.y + time * speed;
   indexY = floor(py / (cell+thin));
 	p.y = repeat(py, cell+thin);
-	scene = max(abs(p.y)-thin, sdCylinder(p.xz, radius));
+	scene = min(scene, max(abs(p.y)-thin, sdCylinder(p.xz, radius)));
 	amod(p.xz, segments);
 	p.x -= radius;
 	scene = min(scene, max(abs(p.z)-thin, p.x));
 
-	// horizontal
+	// horizontal windot
   p = pDonut;
 	p.xz *= rot(PI/segments);
   py = p.y + time * speed;
@@ -135,16 +151,14 @@ float map (vec3 pos) {
 	seed = vec2(indexX, indexY);
 	salt = rng(seed);
 	p.x -= radius;
+  vec2 dimension = vec2(.75,.5);
+  p.x +=  dimension.x * 1.5;
+	scene = max(scene, -sdBox(p, vec3(dimension.x, .1, dimension.y)));
+  scene = min(scene, window(p.xzy, dimension, salt));
 
-	// window
-  p.x +=  height;
-	scene = max(scene, -sdBox(p, vec3(.75, 1., .5)));
-  scene = min(scene, window(p.xzy, vec2(.75,.5), salt));
-
-	// vertical
+	// vertical window
   p = pDonut;
-	p.xz *= rot(PI/segments);
-  py = p.y + time * speed;
+  py = p.y + cell/2. + time * speed;
   indexY = floor(py / (cell+thin));
 	p.y = repeat(py, cell+thin);
 	indexX = amodIndex(p.xz, segments);
@@ -152,11 +166,23 @@ float map (vec3 pos) {
 	seed = vec2(indexX, indexY);
 	salt = rng(seed);
 	p.x -= radius;
+  dimension.y = 1.5;
+  p.x +=  dimension.x * 1.25;
+	scene = max(scene, -sdBox(p, vec3(dimension, .1)));
+  scene = min(scene, window(p, dimension, salt));
 
-	// window
-  p.x +=  height;
-	scene = max(scene, -sdBox(p, vec3(.75, 1., .5)));
-  scene = min(scene, window(p.xzy, vec2(.75,.5), salt));
+  // element
+  p = pDonut;
+	p.xz *= rot(PI/segments);
+  py = p.y + cell/2. + time * speed;
+  indexY = floor(py / (cell+thin));
+	p.y = repeat(py, cell+thin);
+	indexX = amodIndex(p.xz, segments);
+	amod(p.xz, segments);
+	seed = vec2(indexX, indexY);
+	salt = rng(seed);
+	p.x -= radius - height;
+  scene = min(scene, box(p, salt));
 
   p = pos;
   float px = p.x;
@@ -171,7 +197,7 @@ float map (vec3 pos) {
 void main () {
   vec2 uv = (gl_FragCoord.xy-.5*iResolution.xy)/iResolution.y;
   vec3 eye = vec3(0,0,-20);
-  vec3 ray = normalize(vec3(uv, 1.75));
+  vec3 ray = normalize(vec3(uv, 1.3));
 	camera(eye);
 	camera(ray);
 	float dither = rng(uv+fract(time));
@@ -187,13 +213,13 @@ void main () {
     pos += ray * dist;
   }
   vec3 color = vec3(1);
-  // vec3 normal = getNormal(pos);
+  vec3 normal = getNormal(pos);
   // vec3 view = normalize(eye-pos);
   // color = normal*.5+.5;
   // color *= dot(view, normal)*.5+.5;
-	vec3 light = vec3(20.,40.,0.);
+	vec3 light = vec3(40.,100.,0.);
   color *= shade;
-	float shadow = getShadow(pos, light, 32.);
+	float shadow = getShadow(pos, light, 2.);
 	color *= shadow;
   color = pow(color, vec3(1./2.));
 	// color = step(.01,color);
