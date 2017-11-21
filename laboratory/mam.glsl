@@ -41,13 +41,8 @@ float getShadow (vec3 pos, vec3 at, float k) {
     vec3 dir = normalize(at - pos);
     float maxt = length(at - pos);
     float f = 1.;
-<<<<<<< HEAD
     float t = VOLUME*50.;
     for (float i = 0.; i <= 1.; i += 1./15.) {
-=======
-    float t = VOLUME*100.;
-    for (float i = 0.; i <= 1.; i += 1./20.) {
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
         float dist = map(pos + dir * t);
         if (dist < VOLUME) return 0.;
         f = min(f, k * dist / t);
@@ -70,23 +65,15 @@ void camera (inout vec3 p) {
 }
 
 float applyDonut (inout vec3 pos, float donut, float radius, float cell, float thin) {
-<<<<<<< HEAD
 	float speed = 4.;
-=======
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
 	pos.x += donut;
 	pos.y += radius;
 	pos.xz = displaceLoop(pos.xz, donut);
 	pos.z *= donut;
 	pos.xzy = pos.xyz;
-<<<<<<< HEAD
 	float indexY = floor((pos.y+time*speed) / (cell+thin));
 	pos.y = repeat(pos.y+time*speed, cell+thin);
 	pos.xz *= rot(-time/speed/2.);
-=======
-	float indexY = floor((pos.y+time) / (cell+thin));
-	pos.y = repeat(pos.y+time, cell+thin);
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
 	return indexY;
 }
 
@@ -118,7 +105,6 @@ float map (vec3 pos) {
 	float salt = rng(seed);
 	p.x -= radius - .1 - 1. * salt;
 	p.z -= sin(salt*10.)*.5;
-<<<<<<< HEAD
 	vec3 pp = p;
 
 	// boxes
@@ -126,25 +112,10 @@ float map (vec3 pos) {
 	p = pp;
 	p.x += .5;
 	scene = min(scene, sdBox(p, vec3(.2,.5,.5)*(.5+.5*salt)));
-=======
-	scene = min(scene, sdBox(p, vec3(.1+.4*salt)));
-
-	vec3 pp = p;
-	p = pp;
-	p.y += cell/2.;
-	p.x += .5;
-	scene = max(scene, -sdBox(p, vec3(.5,1.,1.)));
-
-	p = pp;
-	p.x += .5;
-	scene = min(scene, sdBox(p, vec3(.2,.5,.5)*(.5+.5*salt)));
-
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
 	p = pp;
 	p.x += 1.;
 	scene = min(scene, sdBox(p, vec3(.5,.2,.5)));
 
-<<<<<<< HEAD
 	// window
 	p = pp;
 	p.x += .5;
@@ -154,20 +125,13 @@ float map (vec3 pos) {
 	float cros = sdBox(p, vec3(.01,2.,2.));
 	// scene = min(scene, cros);
 
-=======
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
   return scene;
 }
 
 void main () {
   vec2 uv = (gl_FragCoord.xy-.5*iResolution.xy)/iResolution.y;
-<<<<<<< HEAD
   vec3 eye = vec3(-10,-6,-20);
   vec3 ray = normalize(vec3(uv, 1.75));
-=======
-  vec3 eye = vec3(-10,-5,-20);
-  vec3 ray = normalize(vec3(uv, 2.));
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
 	camera(eye);
 	camera(ray);
 	float dither = rng(uv+fract(time));
@@ -188,18 +152,11 @@ void main () {
   // vec3 view = normalize(eye-pos);
   // color = normal*.5+.5;
   // color *= dot(view, normal)*.5+.5;
-<<<<<<< HEAD
 	vec3 light = vec3(0.,40.,-10.);
-=======
-	vec3 light = vec3(0.,50.,-50.);
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
   color *= shade;
 	float shadow = getShadow(pos, light, 32.);
 	color *= shadow;
   color = pow(color, vec3(1./2.));
-<<<<<<< HEAD
 	// color = step(.01,color);
-=======
->>>>>>> 56cae43cee5412784c4412c81779f48b9d01e33c
   gl_FragColor = vec4(color, 1);
 }
