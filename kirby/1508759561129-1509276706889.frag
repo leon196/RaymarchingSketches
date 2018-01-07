@@ -5,10 +5,6 @@
 precision mediump float;
 #endif
 
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_time;
-
 #define STEPS 1./30.
 #define VOLUME .01
 #define MIN_STEP .01
@@ -58,11 +54,11 @@ const vec3 red = vec3(0.843, 0.145, 0.113);
 Shape sdKirby (vec3 pos) {
     Shape kirby = newShape();
     vec3 p;
-    
+
     // body
     p = pos;
     float body = sdSphere(p, 1.);
-    
+
     // foot
     p = pos;
     p.x = abs(p.x)-.4;
@@ -71,7 +67,7 @@ Shape sdKirby (vec3 pos) {
     p.z *= .65;
     float foot = sdSphere(p, .4);
     foot = smax(foot, -p.y, .2);
-    
+
     // hand
     p = pos;
     p.x = abs(p.x)-1.;
@@ -79,7 +75,7 @@ Shape sdKirby (vec3 pos) {
     p.x *= .75;
     p.y *= 1.5;
     float hand = sdSphere(p, .4);
-    
+
     kirby.dist = min(min(body, foot), hand);
     kirby.color = mix(pink, red, step(foot, body));
     return kirby;

@@ -196,6 +196,7 @@ float map (vec3 pos) {
 
 void main () {
   vec2 uv = (gl_FragCoord.xy-.5*iResolution.xy)/iResolution.y;
+  uv.xy = uv.yx;
   vec3 eye = vec3(0,0,-20);
   vec3 ray = normalize(vec3(uv, 1.3));
 	camera(eye);
@@ -213,15 +214,10 @@ void main () {
     pos += ray * dist;
   }
   vec3 color = vec3(1);
-  vec3 normal = getNormal(pos);
-  // vec3 view = normalize(eye-pos);
-  // color = normal*.5+.5;
-  // color *= dot(view, normal)*.5+.5;
 	vec3 light = vec3(40.,100.,0.);
   color *= shade;
-	float shadow = getShadow(pos, light, 2.);
-	color *= shadow;
-  color = pow(color, vec3(1./2.));
-	// color = step(.01,color);
+  color *= getShadow(pos, light, 4.);
+  color = smoothstep(.0, .5, color);
+  color = sqrt(color);
   gl_FragColor = vec4(color, 1);
 }

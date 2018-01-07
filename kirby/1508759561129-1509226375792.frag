@@ -5,10 +5,6 @@
 precision mediump float;
 #endif
 
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_time;
-
 #define STEPS 1./30.
 #define VOLUME .01
 #define MIN_STEP .0001
