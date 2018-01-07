@@ -196,7 +196,8 @@ float map (vec3 pos) {
 
 void main () {
   vec2 uv = (gl_FragCoord.xy-.5*iResolution.xy)/iResolution.y;
-  uv.xy = uv.yx;
+  // uv.xy = uv.yx;
+  uv.xy *= rot(PI/2.);
   vec3 eye = vec3(0,0,-20);
   vec3 ray = normalize(vec3(uv, 1.3));
 	camera(eye);
