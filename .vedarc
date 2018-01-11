@@ -1,0 +1,9 @@
+{
+    "IMPORTED": {
+        "image1": {
+            "PATH": "./61.jpg",
+        },
+    },
+    "vertexMode": "LINES",
+    "pixelRatio": 4,
+}
