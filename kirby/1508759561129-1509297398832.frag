@@ -155,6 +155,20 @@ Shape sdPlant (vec3 pos) {
     p.x -= .3;
     plant.dist = sdCylinder(p.xz, .5);
     plant.color = mix(green1, green2, mod(id,2.));
+
+    // p = pos;
+    // id = amod(p.xz,8.);
+    // p.x -= .5;
+    // float dirt = sdSphere(p, .5);
+    // p = pos;
+    // p.xz *= rot(PI/8.);
+    // id = amod(p.xz,8.);
+    // p.x -= 1.;
+    // p.y += .4;
+    // float blend = .2;
+    // dirt = smin(dirt, sdSphere(p, .5), blend);
+    // plant.color = mix(plant.color, beige, smoo(dirt, plant.dist, blend));
+    // plant.dist = smin(plant.dist, dirt, blend);
     return plant;
 }
 
@@ -189,7 +203,7 @@ void main() {
         dist += shape.dist;
         pos = eye + ray * dist;
     }
-	vec3 color = shape.color;
+	   vec3 color = shape.color;
     vec3 normal = getNormal(pos);
     vec3 view = normalize(eye-pos);
     vec3 lightPos = vec3(1.,0,-2.);
