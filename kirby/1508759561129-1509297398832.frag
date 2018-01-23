@@ -68,7 +68,9 @@ Shape sdKirby (vec3 pos) {
     foot = smax(foot, -p.y, .2);
 
     // breath animation
+
     float wave = .5+.5*sin(u_time*5.);
+
     pos.y += 1.;
     pos.y *= 1.+.1*wave;
     pos.y -= 1.;
@@ -130,8 +132,8 @@ Shape sdGround (vec3 pos) {
     Shape ground = newShape();
     vec3 p;
     p = pos;
-    float cell = 1.;
-    float height = .05;
+    float cell = .5;
+    float height = .1;
     float padding = .45;
     p.xz = repeat(p.xz, cell);
     p.y += 1. + height;
@@ -139,8 +141,7 @@ Shape sdGround (vec3 pos) {
 
     p = pos;
     p.xz = repeat(p.xz+cell/2., cell);
-    float r = abs(p.x*p.z)*.9+.1;
-    ground.color = beige * r;
+    ground.color = beige;
     return ground;
 }
 
@@ -172,12 +173,42 @@ Shape sdPlant (vec3 pos) {
     return plant;
 }
 
+Shape sdGrass (vec3 pos) {
+  Shape grass = newShape();
+
+  float cell = 1.;
+  float radius = 1.;
+  float height = radius+.9;
+  float variation = -.1;
+  float blend = .1;
+
+  vec3 p = pos;
+  vec2 id = floor(p.xz/cell);
+  float salt = rng(id);
+  p.y += height-salt*variation;
+  p.xz = repeat(p.xz, cell);
+  grass.dist = sdSphere(p, radius);
+
+  p = pos;
+  vec2 pxz = p.xz+cell/2.;
+  id = floor(pxz/cell);
+  salt = rng(id);
+  p.y += height-salt*variation;
+  p.xz = repeat(pxz, cell);
+  id = floor(p.xz/cell);
+  grass.dist = smin(grass.dist, sdSphere(p, radius), blend);
+
+  grass.color = green1;
+  return grass;
+}
+
 Shape map (vec3 pos) {
     Shape scene = newShape();
     vec3 p = pos;
     scene = add(scene, sdKirby(p));
     scene = add(scene, sdGround(p));
     scene = add(scene, sdPlant(p));
+    scene = add(scene, sdGrass(p));
     return scene;
 }
 
