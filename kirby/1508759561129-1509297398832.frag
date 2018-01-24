@@ -5,7 +5,7 @@
 precision mediump float;
 #endif
 
-#define STEPS 50.
+#define STEPS 100.
 #define VOLUME .01
 #define FAR 10.
 #define PI 3.14159
@@ -26,10 +26,10 @@ vec3 repeat (vec3 v, float c) { return mod(v,c)-c/2.; }
 float smoo (float a, float b, float r) { return clamp(.5+.5*(b-a)/r, 0., 1.); }
 float smin (float a, float b, float r) { float h = smoo(a,b,r); return mix(b,a,h)-r*h*(1.-h); }
 float smax (float a, float b, float r) { float h = smoo(a,b,r); return mix(a,b,h)+r*h*(1.-h); }
-vec2 displaceLoop (vec2 p, float r) { return vec2(length(p.xy)-r, atan(p.y,p.x)); }
-struct Shape { float dist; vec3 color; float spec; };
-Shape newShape () { Shape shape; shape.dist = 1000.; shape.color = vec3(1.); shape.spec = 0.; return shape; }
-Shape add (Shape a, Shape b) { Shape c = newShape(); c.dist = min(a.dist, b.dist); float op = step(b.dist, a.dist); c.color = mix(a.color, b.color, op); c.spec = mix(a.spec, b.spec, op); return c; }
+vec2 toroidal (vec2 p, float r) { return vec2(length(p.xy)-r, atan(p.y,p.x)); }
+struct Shape { float dist; vec3 color; float spec; float glow; };
+Shape newShape () { Shape shape; shape.dist = 1000.; shape.color = vec3(1.); shape.spec = 0.; shape.glow = 0.; return shape; }
+Shape add (Shape a, Shape b) { Shape c = newShape(); c.dist = min(a.dist, b.dist); float op = step(b.dist, a.dist); c.color = mix(a.color, b.color, op); c.spec = mix(a.spec, b.spec, op); c.glow = mix(a.glow, b.glow, op); return c; }
 Shape map (vec3 p);
 vec3 getNormal (vec3 p) { vec2 e = vec2(.01,0); return normalize(vec3(map(p+e.xyy).dist-map(p-e.xyy).dist,map(p+e.yxy).dist-map(p-e.yxy).dist,map(p+e.yyx).dist-map(p-e.yyx).dist)); }
 float getShadow (vec3 pos, vec3 at, float k) {
@@ -46,6 +46,31 @@ float getShadow (vec3 pos, vec3 at, float k) {
     }
     return f;
 }
+// https://github.com/lightbits/ray-march/blob/master/data/raymarch.fs
+float ambientOcclusion(vec3 p, vec3 n)
+{
+	float stepSize = 0.01;
+	float t = stepSize;
+	float oc = 0.0;
+	for(int i = 0; i < 10; ++i) {
+		float d = map(p - n * t).dist;
+		oc += t - d;
+		t += stepSize;
+	}
+	return clamp(oc, 0., 1.);
+}
+
+float hash (float n) { return fract(sin(n)*43758.5453); }
+float noiseIQ( vec3 x ) {
+  vec3 p = floor(x);
+  vec3 f = fract(x);
+  f = f*f*(3.0-2.0*f);
+  float n = p.x + p.y*57.0 + 113.0*p.z;
+  return mix(mix(mix( hash(n+0.0), hash(n+1.0),f.x),
+  mix( hash(n+57.0), hash(n+58.0),f.x),f.y),
+  mix(mix( hash(n+113.0), hash(n+114.0),f.x),
+  mix( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+}
 
 const vec3 pink = vec3(0.917,0.482,0.663);
 const vec3 red = vec3(0.825,0.142,0.111);
@@ -53,6 +78,7 @@ const vec3 beige = vec3(0.905, 0.670, 0.235);
 const vec3 blue = vec3(0.058, 0.074, 0.560);
 const vec3 green1 = vec3(0.298,0.830,0.153);
 const vec3 green2 = vec3(0.038,0.260,0.047);
+const vec3 gold = vec3(1, 0.858, 0.058);
 
 Shape sdKirby (vec3 pos) {
     Shape kirby = newShape();
@@ -91,7 +117,8 @@ Shape sdKirby (vec3 pos) {
     // body compo
     kirby.dist = min(min(body, foot), hand);
     kirby.color = mix(pink, red, step(foot, body));
-    kirby.spec = 1.;
+    // kirby.spec = 1.;
+    kirby.glow = 1.;
 
     // eyes
     p = pos;
@@ -132,12 +159,15 @@ Shape sdGround (vec3 pos) {
     Shape ground = newShape();
     vec3 p;
     p = pos;
+    p.y += 1.;
     float cell = .5;
-    float height = .1;
+    float height = .2;
     float padding = .45;
     p.xz = repeat(p.xz, cell);
     p.y += 1. + height;
     ground.dist = smin(p.y, sdBox(p, vec3(cell*padding, height, cell*padding)), .2);
+    p.y -= 1.;
+    ground.dist = smin(ground.dist, max(sdBox(pos,vec3(1,3,1)),sdBox(p, vec3(cell*padding, height, cell*padding))), .2);
 
     p = pos;
     p.xz = repeat(p.xz+cell/2., cell);
@@ -147,59 +177,51 @@ Shape sdGround (vec3 pos) {
 
 Shape sdPlant (vec3 pos) {
     Shape plant = newShape();
-    pos.x -= 2.5;
-    pos.z -= 1.;
+    plant.spec = .5;
+    plant.glow = 1.;
+
+    float radius = 2.;
+
     pos.y += 1.;
+    pos.xyz = pos.zxy;
     vec3 p = pos;
-    p.xz *= rot(p.y);
-    float id = amod(p.xz,4.);
-    p.x -= .3;
-    plant.dist = sdCylinder(p.xz, .5);
+    p.xy = toroidal(p.xy, radius);
+    p.y *= 2.;
+    p.xz *= rot(p.y * 2.+sin(p.y+u_time));
+    float id = amod(p.xz,2.);
+    p.x -= .2;
+
+    p.xz *= rot(-p.y+u_time+sin(p.y-u_time*2.)*5.);
+    id += amod(p.xz, 4.);
+    p.x -= .1;
+
+    plant.dist = sdCylinder(p.xz, .04);
     plant.color = mix(green1, green2, mod(id,2.));
 
-    // p = pos;
-    // id = amod(p.xz,8.);
-    // p.x -= .5;
-    // float dirt = sdSphere(p, .5);
-    // p = pos;
-    // p.xz *= rot(PI/8.);
-    // id = amod(p.xz,8.);
-    // p.x -= 1.;
-    // p.y += .4;
-    // float blend = .2;
-    // dirt = smin(dirt, sdSphere(p, .5), blend);
-    // plant.color = mix(plant.color, beige, smoo(dirt, plant.dist, blend));
-    // plant.dist = smin(plant.dist, dirt, blend);
     return plant;
 }
 
-Shape sdGrass (vec3 pos) {
-  Shape grass = newShape();
 
-  float cell = 1.;
-  float radius = 1.;
-  float height = radius+.9;
-  float variation = -.1;
-  float blend = .1;
+Shape sdStar (vec3 pos) {
+    Shape star = newShape();
+    star.spec = 1.;
+    star.glow = 1.;
 
-  vec3 p = pos;
-  vec2 id = floor(p.xz/cell);
-  float salt = rng(id);
-  p.y += height-salt*variation;
-  p.xz = repeat(p.xz, cell);
-  grass.dist = sdSphere(p, radius);
+    vec3 p = pos;
+    float radius = 5.;
+    p.y -= radius;
+    float scale = 1.;
+    p.xy *= rot(-u_time*.5);
+    float size = .2;
 
-  p = pos;
-  vec2 pxz = p.xz+cell/2.;
-  id = floor(pxz/cell);
-  salt = rng(id);
-  p.y += height-salt*variation;
-  p.xz = repeat(pxz, cell);
-  id = floor(p.xz/cell);
-  grass.dist = smin(grass.dist, sdSphere(p, radius), blend);
+    float index = amod(p.xy, 16.);
+    p.x -= radius-1.5;
+    p.xy *= rot(u_time+index);
+    amod(p.xy, 5.);
+    star.dist = sdIso(p, size);
+    star.color = gold;
 
-  grass.color = green1;
-  return grass;
+    return star;
 }
 
 Shape map (vec3 pos) {
@@ -208,7 +230,7 @@ Shape map (vec3 pos) {
     scene = add(scene, sdKirby(p));
     scene = add(scene, sdGround(p));
     scene = add(scene, sdPlant(p));
-    scene = add(scene, sdGrass(p));
+    scene = add(scene, sdStar(p));
     return scene;
 }
 
@@ -216,14 +238,20 @@ Shape map (vec3 pos) {
 vec3 camera (vec3 p) {
     // p.yz *= rot((.5*PI*(u_mouse.y/u_resolution.y-.5)));
     // p.xz *= rot((.5*PI*(u_mouse.x/u_resolution.x-.5)));
-    p.yz *= rot((.5*PI*(.65-.5)));
     p.xz *= rot((.5*PI*(.4*sin(u_time*.1))));
     return p;
+}
+vec3 lookAt (vec3 eye, vec3 target, vec2 uv) {
+  vec3 forward = normalize(target-eye);
+  vec3 right = normalize(cross(vec3(0,1,0), forward));
+  vec3 up = normalize(cross(forward, right));
+  return normalize(forward + uv.x * right + uv.y * up);
 }
 
 void main() {
     vec2 uv = (gl_FragCoord.xy-.5*u_resolution.xy)/u_resolution.y;
-    vec3 eye = camera(vec3(0,1.,-4.5)), ray = camera(normalize(vec3(uv,.7)));
+    vec3 eye = camera(vec3(0,1,-5.5));
+    vec3 ray = lookAt(eye, vec3(0), uv);
     float shade = 0., dist = 0.;
     vec3 pos = eye;
     Shape shape;
@@ -245,10 +273,13 @@ void main() {
     float ambient = .8;
     color = mix(shape.color * ambient, shape.color, light);
     color = mix(color, vec3(1), shape.spec*clamp(pow(light,16.),0.,1.));
-    color *= .1+.9*getShadow(pos, lightPos, 64.)*clamp(dot(lightDir,normal),0.,1.);
-    color *= dot(normal,view)*.5+.5;
-    //color *= shade;
-    color *= 1.-smoothstep(FAR/2.,FAR,dist);
+    color *= .3+.7*getShadow(pos, lightPos, 64.)*clamp(dot(lightDir,normal),0.,1.);
+    // color *= dot(normal,view)*.5+.5;
+    color = mix(color, shape.color, (1.-abs(dot(normal, view))) * shape.glow);
+    color *= shade;
+    float far = 1.-smoothstep(FAR/2.,FAR,dist);
+    color = mix(beige*abs(uv.y), color, far);
     color = pow(color, vec3(1./2.));
+    color = mix(color, blueSky, (1.-far)*step(0.,uv.y));
     gl_FragColor = vec4(color,1.0);
 }
