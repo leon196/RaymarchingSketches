@@ -1,9 +1,6 @@
-// Author:
-// Title:
-
-#ifdef GL_ES
-precision mediump float;
-#endif
+// Kirby
+// Leon 2018/01/24
+// Using code from IQ, Mercury, LJ, Duke, Koltes
 
 #define STEPS 30.
 #define VOLUME .01
@@ -11,7 +8,16 @@ precision mediump float;
 #define PI 3.14159
 #define TAU 2.*PI
 
-// raymarch toolbox
+const vec3 pink = vec3(0.917,0.482,0.663);
+const vec3 red = vec3(0.825,0.142,0.111);
+const vec3 beige = vec3(0.905, 0.670, 0.235);
+const vec3 blue = vec3(0.058, 0.074, 0.560);
+const vec3 blueSky = vec3(0.741, 0.941, 1);
+const vec3 green1 = vec3(0.298,0.830,0.153);
+const vec3 green2 = vec3(0.038,0.260,0.047);
+const vec3 gold = vec3(1, 0.858, 0.058);
+
+// sdf toolbox
 float rng (vec2 seed) { return fract(sin(dot(seed*.1684,vec2(54.649,321.547)))*450315.); }
 mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
 float sdSphere (vec3 p, float r) { return length(p)-r; }
@@ -27,10 +33,23 @@ float smoo (float a, float b, float r) { return clamp(.5+.5*(b-a)/r, 0., 1.); }
 float smin (float a, float b, float r) { float h = smoo(a,b,r); return mix(b,a,h)-r*h*(1.-h); }
 float smax (float a, float b, float r) { float h = smoo(a,b,r); return mix(a,b,h)+r*h*(1.-h); }
 vec2 toroidal (vec2 p, float r) { return vec2(length(p.xy)-r, atan(p.y,p.x)); }
-struct Shape { float dist; vec3 color; float spec; float glow; };
+vec3 lookAt (vec3 eye, vec3 target, vec2 uv) {
+  vec3 forward = normalize(target-eye);
+  vec3 right = normalize(cross(vec3(0,1,0), forward));
+  vec3 up = normalize(cross(forward, right));
+  return normalize(forward + uv.x * right + uv.y * up);
+}
+
+struct Shape {
+    float dist;
+    vec3 color;
+    float spec;
+    float glow;
+};
 Shape newShape () { Shape shape; shape.dist = 1000.; shape.color = vec3(1.); shape.spec = 0.; shape.glow = 0.; return shape; }
 Shape add (Shape a, Shape b) { Shape c = newShape(); c.dist = min(a.dist, b.dist); float op = step(b.dist, a.dist); c.color = mix(a.color, b.color, op); c.spec = mix(a.spec, b.spec, op); c.glow = mix(a.glow, b.glow, op); return c; }
 Shape map (vec3 p);
+
 vec3 getNormal (vec3 p) { vec2 e = vec2(.01,0); return normalize(vec3(map(p+e.xyy).dist-map(p-e.xyy).dist,map(p+e.yxy).dist-map(p-e.yxy).dist,map(p+e.yyx).dist-map(p-e.yyx).dist)); }
 float getShadow (vec3 pos, vec3 at, float k) {
     vec3 dir = normalize(at - pos);
@@ -47,15 +66,6 @@ float getShadow (vec3 pos, vec3 at, float k) {
     return f;
 }
 
-const vec3 pink = vec3(0.917,0.482,0.663);
-const vec3 red = vec3(0.825,0.142,0.111);
-const vec3 beige = vec3(0.905, 0.670, 0.235);
-const vec3 blue = vec3(0.058, 0.074, 0.560);
-const vec3 blueSky = vec3(0.741, 0.941, 1);
-const vec3 green1 = vec3(0.298,0.830,0.153);
-const vec3 green2 = vec3(0.038,0.260,0.047);
-const vec3 gold = vec3(1, 0.858, 0.058);
-
 Shape sdKirby (vec3 pos) {
     Shape kirby = newShape();
     vec3 p;
@@ -70,9 +80,7 @@ Shape sdKirby (vec3 pos) {
     foot = smax(foot, -p.y, .2);
 
     // breath animation
-
-    float wave = .5+.5*sin(u_time*5.);
-
+    float wave = .5+.5*sin(iTime*5.);
     pos.y += 1.;
     pos.y *= 1.+.1*wave;
     pos.y -= 1.;
@@ -99,7 +107,7 @@ Shape sdKirby (vec3 pos) {
     // eyes
     p = pos;
     p.y -= .3;
-    p.y *= 1./smoothstep(.0,.1,abs(sin(u_time)));
+    p.y *= 1./smoothstep(.0,.1,abs(sin(iTime)));
     p.x = abs(p.x) - .2;
     p.x *= 2.;
     p.y *= .75;
@@ -144,9 +152,6 @@ Shape sdGround (vec3 pos) {
     ground.dist = smin(p.y, sdBox(p, vec3(cell*padding, height, cell*padding)), .2);
     p.y -= 1.;
     ground.dist = smin(ground.dist, max(sdBox(pos,vec3(1,3,1)),sdBox(p, vec3(cell*padding, height, cell*padding))), .2);
-
-    p = pos;
-    p.xz = repeat(p.xz+cell/2., cell);
     ground.color = beige;
     return ground;
 }
@@ -155,25 +160,20 @@ Shape sdPlant (vec3 pos) {
     Shape plant = newShape();
     plant.spec = .5;
     plant.glow = 1.;
-
     float radius = 2.;
-
     pos.y += 1.;
     pos.xyz = pos.zxy;
     vec3 p = pos;
     p.xy = toroidal(p.xy, radius);
     p.y *= 2.;
-    p.xz *= rot(p.y * 2.+sin(p.y+u_time));
+    p.xz *= rot(p.y * 2.+sin(p.y+iTime));
     float id = amod(p.xz,2.);
     p.x -= .2;
-
-    p.xz *= rot(-p.y+u_time+sin(p.y-u_time*2.)*5.);
+    p.xz *= rot(-p.y+iTime+sin(p.y-iTime*2.)*5.);
     id += amod(p.xz, 4.);
     p.x -= .1;
-
     plant.dist = sdCylinder(p.xz, .04);
     plant.color = mix(green1, green2, mod(id,2.));
-
     return plant;
 }
 
@@ -182,21 +182,17 @@ Shape sdStar (vec3 pos) {
     Shape star = newShape();
     star.spec = 1.;
     star.glow = 1.;
-
-    vec3 p = pos;
     float radius = 5.;
-    p.y -= radius;
-    float scale = 1.;
-    p.xy *= rot(-u_time*.5);
     float size = .2;
-
+    vec3 p = pos;
+    p.y -= radius;
+    p.xy *= rot(-iTime*.5);
     float index = amod(p.xy, 16.);
     p.x -= radius-1.5;
-    p.xy *= rot(u_time+index);
+    p.xy *= rot(iTime+index);
     amod(p.xy, 5.);
     star.dist = sdIso(p, size);
     star.color = gold;
-
     return star;
 }
 
@@ -212,20 +208,13 @@ Shape map (vec3 pos) {
 
 
 vec3 camera (vec3 p) {
-    // p.yz *= rot((.5*PI*(u_mouse.y/u_resolution.y-.5)));
-    // p.xz *= rot((.5*PI*(u_mouse.x/u_resolution.x-.5)));
-    p.xz *= rot((.5*PI*(.4*sin(u_time*.1))));
+    // p.yz *= rot((.5*PI*(iMouse.y/iResolution.y-.5)));
+    // p.xz *= rot((.5*PI*(iMouse.x/iResolution.x-.5)));
+    p.xz *= rot((.5*PI*(.4*sin(iTime*.1))));
     return p;
 }
-vec3 lookAt (vec3 eye, vec3 target, vec2 uv) {
-  vec3 forward = normalize(target-eye);
-  vec3 right = normalize(cross(vec3(0,1,0), forward));
-  vec3 up = normalize(cross(forward, right));
-  return normalize(forward + uv.x * right + uv.y * up);
-}
 
-void main() {
-    vec2 uv = (gl_FragCoord.xy-.5*u_resolution.xy)/u_resolution.y;
+vec3 raymarch (vec2 uv) {
     vec3 eye = camera(vec3(0,1,-5.5));
     vec3 ray = lookAt(eye, vec3(0), uv);
     float shade = 0., dist = 0.;
@@ -234,7 +223,7 @@ void main() {
     for (float i = 0.; i <= 1.; i += 1./STEPS) {
         shape = map(pos);
         if (shape.dist < VOLUME || dist > FAR) { shade = 1.-i; break; }
-        shape.dist *= .9 + .1 * rng(uv+fract(u_time));
+        shape.dist *= .9 + .1 * rng(uv+fract(iTime));
         dist += shape.dist;
         pos = eye + ray * dist;
     }
@@ -242,7 +231,7 @@ void main() {
     vec3 normal = getNormal(pos);
     vec3 view = normalize(eye-pos);
     vec3 lightPos = vec3(1.,0,-2.);
-    lightPos.xy *= rot(u_time*.5);
+    lightPos.xy *= rot(iTime*.5);
     lightPos.y += 2.;
     vec3 lightDir = normalize(lightPos-pos);
     float light = clamp(dot(lightDir, normal),0.,1.);
@@ -253,9 +242,9 @@ void main() {
     color = mix(color, shape.color, (1.-abs(dot(normal, view))) * shape.glow);
     color *= shade;
     float far = 1.-smoothstep(FAR/2.,FAR,dist);
-    float y = uv.y + sin(uv.x*3.-u_time+sin(uv.x*6.+u_time))*.05;
+    float y = uv.y + sin(uv.x*3.-iTime+sin(uv.x*6.+iTime))*.05;
     color = mix(beige*abs(y), color, far);
     color = pow(color, vec3(1./2.));
     color = mix(color, mix(blueSky, blue, y), (1.-far)*step(0.,y));
-    gl_FragColor = vec4(color,1.0);
+    return color;
 }
