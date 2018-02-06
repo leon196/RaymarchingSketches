@@ -17,6 +17,7 @@ mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
 float sdSphere (vec3 p, float r) { return length(p)-r; }
 float sdCylinder (vec2 p, float r) { return length(p)-r; }
 float sdIso(vec3 p, float r) { return max(0.,dot(p,normalize(sign(p))))-r; }
+float sdIso(vec2 p, float r) { return max(0.,dot(p,normalize(sign(p))))-r; }
 float sdBox( vec3 p, vec3 b ) { vec3 d = abs(p) - b; return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0)); }
 float sdTorus( vec3 p, vec2 t ) { vec2 q = vec2(length(p.xz)-t.x,p.y); return length(q)-t.y; }
 float amod (inout vec2 p, float count) { float an = TAU/count; float a = atan(p.y,p.x)+an/2.; float c = floor(a/an); c = mix(c,abs(c),step(count*.5,abs(c))); a = mod(a,an)-an/2.; p.xy = vec2(cos(a),sin(a))*length(p); return c; }
@@ -62,11 +63,12 @@ Shape sdLink (vec3 pos) {
     vec3 p = pos;
     float faceSize = .87;
     float faceShell = .97;
+    mat2 rotPI4 = rot(PI/4.);
 
     p = pos;
     float head = sdBox(p, vec3(faceSize));
     head = max(head, sdIso(p, faceShell));
-    p.xz *= rot(PI/4.);
+    p.xz *= rotPI4;
     head = max(head, sdBox(p, vec3(faceSize)));
     head = max(head, sdIso(p, faceShell));
 
@@ -77,6 +79,14 @@ Shape sdLink (vec3 pos) {
     p = pos + vec3(0,.2,faceSize);
     float nose = sdIso(p, .15);
     head = min(head, nose);
+
+    p = pos + vec3(0,-.07,0);
+    p.zy *= rot(PI/2.5);
+    p += vec3(0,-.7,0);
+    float capSize = 1.;
+    float cap = max(abs(p.y)-.4,max(sdIso(p.xz, capSize), sdIso(p.xz*rotPI4, capSize)));
+    cap = min(cap, max(abs(p.y)-.4,max(sdIso(p.xz, capSize), sdIso(p.xz*rotPI4, capSize))));
+    head = min(head, cap);
 
     link.dist = head;
     return link;
