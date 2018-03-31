@@ -8,17 +8,22 @@
 // uniform float iGlobalTime; // clock in seconds
 precision mediump float;
 #define synth_Resolution iResolution
-#define Beat mod(iGlobalTime, 100.)
+#define Beat (90.+mod(iGlobalTime, 40.))
+// #define Beat (70.+sin(iGlobalTime))
+// #define Beat 0.
 
 const float PI = 3.14159;
 const float TAU = 6.28318;
-const float aPaperIn = 3.;
-const float aStairIn = 6.;
-const float aLampsIn = 12.;
-const float aLibraryIn = 18.;
+const float aFadeIn1 = 6.;
+const float aLampsIn = 20.;
+const float aLibraryIn = 25.;
+const float aLibrarySwingIn = 50.;
+const float aRotate = 80.;
+const float aDoor = 70.;
 
 // begin
 
+#define anim(start,delay) smoothstep(start, start+delay, Beat)
 
 float rng (vec2 seed) { return fract(sin(dot(seed*.1684,vec2(54.649,321.547)))*450315.); }
 mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
@@ -65,13 +70,14 @@ float mapRooms (vec3 pos) {
 
     // toroidal distortion
     vec3 pTorus = p;
-    pTorus.y += innerRadius - roomHeight / 2.;
+		// pTorus.zy *= rot(.3);
+    pTorus.y += innerRadius + roomHeight;// * 1.56;
     pTorus.x += toroidalRadius;
     pTorus.xz = toroidal(pTorus.xz, toroidalRadius);
-    //pTorus.z += Beat * .01;
+    pTorus.z += Beat * .01;
     pTorus.z *= toroidalRadius;
     pTorus.xzy = pTorus.xyz;
-    // pTorus.xz *= rot(Beat*.05*speed);
+    // pTorus.xz *= rot(Beat*.05);
 
     // walls
     p = pTorus;
@@ -102,46 +108,10 @@ float mapRooms (vec3 pos) {
     float salt = rng(seed);
     float pepper = rng(seed+vec2(.132,0.9023));
     float spice = rng(seed+vec2(.672,0.1973));
-    // salt = .5+.5*sin((salt+Beat)*10.);
-    // pepper = .5+.5*sin((pepper+Beat)*10.);
-    // spice = .5+.5*sin((spice+Beat)*10.);
 
 
     // ground
     scene = min(scene, p.x+roomHeight*.5);
-
-    float lamp = 1000.;
-    float lampHeight = .3+.6*salt;
-    float lampThin = .007;
-    float lampFootThin = .005;
-    float lampHeadRadius = .04+.08*pepper;
-    float lampHeadHeight = .03+.1*salt;
-    float lampHeadCoef = .1+.3*pepper;
-    float lampFootHeight = .03+.08*spice;
-    float lampFootCoef = .1+.5*pepper;
-    float lampFootCount = 3.+floor(5.*spice);
-    float smoothFactor = .02;
-    // lamp trunk
-    p.y -= .75;
-    p.z -= .5;
-    p.x += roomHeight*.5;
-    lamp = min(lamp, max(sdist(p.yz, lampThin), abs(p.x-lampHeight*.5-lampFootHeight*lampFootCoef)-lampHeight*.5));
-    pp = p;
-    p.x -= lampHeight;
-    // lamp head
-    lamp = min(lamp, max(sdist(p.yz, lampHeadRadius+p.x*lampHeadCoef), abs(p.x)-lampHeadHeight));
-    // lamp foot
-    p = pp;
-    p.x -= lampFootThin*2.;
-    amod(p.yz, lampFootCount);
-    p.y -= lampFootHeight;
-    pp = p;
-    p.x += (p.y-lampFootHeight)*lampFootCoef;
-    lamp = smin(lamp, max(sdist(p.xz, lampFootThin), abs(p.y)-lampFootHeight), smoothFactor);
-    p = pp;
-    // lamp foot balls
-    p.y -= lampFootHeight;
-    lamp = smin(lamp, sdist(p, lampFootThin*2.), smoothFactor);
 
     float table = 1000.;
     float tableHeight = .1+.2*salt;
@@ -159,45 +129,10 @@ float mapRooms (vec3 pos) {
     p.x += tableHeight*.5;
     table = min(table, sdBox(p, vec3(tableHeight*.5, tableLegThin, tableLegThin)));
 
-    float plate = 1000.;
-    float plateRadius = .45 * min(tableDepth, tableWidth);
-    float plateThin = .002;
-    float plateCurveHeight = .01;
-    float plateForkThin = .001;
-    float plateForkHeight = .03+.03*salt;
-    float plateForkWidth = .001+.003*salt;
-    // plate
-    p = pp;
-    p.y = abs(p.y) - tableWidth * .5;
-    p.x -= tableThin;
-    pp = p;
-    p.x -= plateThin+plateCurveHeight;
-    p.x += cos(length(p.yz)*20.)*plateCurveHeight;
-    plate = min(plate, max(sdist(p.yz, plateRadius), abs(p.x)-plateThin));
-    // food
-    float food = 1000.;
-    float foodRadiusRatio = .3+.6*mix(pepper, spice, chairSide);
-    float foodRepeat = .01;
-    float foodEatenRatio = .1+.9*mix(salt, pepper, chairSide);
-    ppp = p;
-    p.yz = repeat(p.yz, foodRepeat);
-    food = min(food, sdist(p, foodRepeat));
-    p = ppp;
-    food = max(food, sdist(p, plateRadius*foodRadiusRatio));
-    food = max(food, step(foodEatenRatio, dot(normalize(p.yz), vec2(1,0))));
-    // forks
-    p = pp;
-    p.x -= plateForkThin*2.;
-    p.z = abs(p.z)-plateRadius*1.2;
-    p.yz *= rot((spice*.5+.5)*.2);
-    p.x -= (sin(p.y*50.)*.5+.5)*.01;
-    plateForkWidth *= 1.+.5*sin(p.y*100.);
-    plate = min(plate, sdBox(p, vec3(plateForkThin, plateForkHeight, plateForkWidth)));
-
     float chair = 1000.;
     p = pRoom;
-    float chairHeight = .2+.1*mix(salt, pepper, chairSide);
-    float chairWidth = .05+.1*mix(pepper, spice, chairSide);
+    float chairHeight = .15+.07*mix(salt, pepper, chairSide);
+    float chairWidth = .025+.07*mix(pepper, spice, chairSide);
     float chairLegThin = .002+.005*mix(spice, salt, chairSide);
     float chairSitThin = .01;
     float chairBackHeight = .05;
@@ -238,28 +173,7 @@ float mapRooms (vec3 pos) {
     spice = rng(seed+vec2(.672,0.1973));
     float doorWidth = .15+.05*pepper;
     float doorHeight = .3+.15*spice;
-    float doorThin = .01;
-    float doorPadding = .05+.1*salt;
-    float doorLockWidth = .02;
-    float doorLockThin = .002;
-    float doorLockHeight = .002;
     amod(p.xz, roomCount.x);
-    pp = p;
-    p.z -= doorWidth;
-    vec3 lod2 = 1./vec3(1.,roomCount.y, roomCount.x);
-    float openRatio = sin(Beat*.2+salt*TAU);
-    p.yz *= rot(-PI/2.+.2*openRatio);
-    p.z += doorWidth;
-    p.x -= innerRadius-roomHeight+doorHeight;
-    door = min(door, sdBox(p, vec3(doorHeight, doorThin, doorWidth)));
-    door = max(door, -sdBox(p, vec3(doorHeight-doorPadding, 1., doorWidth-doorPadding)));
-    p.z += doorWidth-doorPadding/2.;
-    p.y = abs(p.y) - doorLockWidth - doorThin - doorLockHeight;
-    door = min(door, sdist(p, doorLockWidth));
-    p.y += doorLockWidth;
-    p.x *= 1.-clamp(.02/abs(p.x),0.,1.);
-    door = min(door, max(sdist(p.xz, doorLockWidth), abs(p.y)-doorLockHeight));
-    p = pp;
     p.x -= innerRadius-roomHeight+doorHeight;
     wall.x = max(wall.x, -sdBox(p, vec3(doorHeight, .1, doorWidth)));
 
@@ -297,156 +211,58 @@ float mapRooms (vec3 pos) {
 
     scene = min(scene, min(wall.x, wall.y));
     scene = min(scene, window);
-    scene = min(scene, door);
-    scene = min(scene, lamp);
+    // scene = min(scene, door);
+    // scene = min(scene, lamp);
     scene = min(scene, chair);
     scene = min(scene, paint);
     scene = min(scene, table);
-    scene = min(scene, plate);
-    scene = min(scene, food);
+    // scene = min(scene, plate);
+    // scene = min(scene, food);
 
     return scene;
 }
 
-
-float mapStairs (vec3 pos) {
-  float scene = 1000.;
-  float wallThin = .2;
-  float wallRadius = 8.;
-  float wallOffset = .2;
-  float wallCount = 10.;
-  float floorThin = .1;
-  float stairRadius = 5.;
-  float stairHeight = .4;
-  float stairCount = 40.;
-  float stairDepth = .31;
-  float bookCount = 100.;
-  float bookRadius = 9.5;
-  float bookSpace = 1.75;
-  vec3 bookSize = vec3(1.,.2,.2);
-  vec3 panelSize = vec3(.03,.2,.7);
-  vec2 cell = vec2(1.4,3.);
-  float paperRadius = 4.;
-  vec3 paperSize = vec3(.3,.01,.4);
-  vec3 p;
-
-  // move it
-  pos.y += Beat * .1;
-
-  // twist it
-  // pos.xz *= rot(pos.y*.05+time*.1);
-  // pos.xz += normalize(pos.xz) * sin(pos.y*.5+time);
-
-  // holes
-  float holeWall = sdist(pos.xz, wallRadius);
-  float holeStair = sdist(pos.xz, stairRadius);
-
-  // walls
-  p = pos;
-  amod(p.xz, wallCount);
-  p.x -= wallRadius;
-  scene = min(scene, max(-p.x, abs(p.z)-wallThin));
-  scene = max(scene, -sdist(pos.xz, wallRadius-wallOffset));
-
-  // floors
-  p = pos;
-  p.y = repeat(p.y, cell.y);
-  float disk = max(sdist(p.xz, 1000.), abs(p.y)-floorThin);
-  disk = max(disk, -sdist(pos.xz, wallRadius));
-  scene = min(scene, disk);
-
-  // stairs
-  p = pos;
-  float stairIndex = amod(p.xz, stairCount);
-  p.y -= stairIndex*stairHeight;
-  p.y = repeat(p.y, stairCount*stairHeight);
-  float stair = sdBox(p, vec3(100,stairHeight,stairDepth));
-  scene = min(scene, max(stair, max(holeWall, -holeStair)));
-  p = pos;
-  p.xz *= rot(PI/stairCount);
-  stairIndex = amod(p.xz, stairCount);
-  p.y -= stairIndex*stairHeight;
-  p.y = repeat(p.y, stairCount*stairHeight);
-  stair = sdBox(p, vec3(100,stairHeight,stairDepth));
-  scene = min(scene, max(stair, max(holeWall, -holeStair)));
-  p = pos;
-  p.y += stairHeight*.5;
-  p.y -= stairHeight*stairCount*atan(p.z,p.x)/TAU;
-  p.y = repeat(p.y, stairCount*stairHeight);
-  scene = min(scene, max(max(sdist(p.xz, wallRadius), abs(p.y)-stairHeight), -holeStair));
-
-  // books
-  p = pos;
-  p.y -= cell.y*.5;
-  vec2 seed = vec2(floor(p.y/cell.y), 0);
-  p.y = repeat(p.y, cell.y);
-  p.xz *= rot(PI/wallCount);
-  seed.y += amod(p.xz, wallCount)/10.;
-  seed.y += floor(p.z/(bookSize.z*bookSpace));
-  p.z = repeat(p.z, bookSize.z*bookSpace);
-  float salt = rng(seed);
-  bookSize.x *= .5+.5*salt;
-  bookSize.y += salt;
-  bookSize.z *= .5+.5*salt;
-  p.x -= bookRadius + wallOffset;
-  p.x += cos(p.z*2.) - bookSize.x;
-  p.x += .01*smoothstep(.99,1.,sin(p.y*(1.+10.*salt)));
-  scene = min(scene, max(sdBox(p, vec3(bookSize.x,100.,bookSize.z)), p.y-bookSize.y));
-
-  // panel
-  p = pos;
-  p.y = repeat(p.y, cell.y);
-  p.xz *= rot(PI/wallCount);
-  amod(p.xz, wallCount);
-  p.x -= wallRadius;
-  float panel = sdBox(p, panelSize);
-  float pz = p.z;
-  p.z = repeat(p.z, .2+.3*salt);
-  panel = min(panel, max(sdBox(p, vec3(.1,.1,.04)), abs(pz)-panelSize.z*.8));
-  scene = min(scene, panel);
-
-  // papers
-  p = pos;
-  p.y -= stairHeight;
-  p.y += Beat*.2;
-  p.xz *= rot(PI/stairCount);
-  float ry = 8.;//stairHeight*stairCount;
-  float iy = floor(p.y/ry);
-  salt = rng(vec2(iy));
-  float a = iy;
-  p.xz -= vec2(cos(a),sin(a))*paperRadius;
-
-  p.y = repeat(p.y, ry);
-  p.xy *= rot(p.z);
-  p.xz *= rot(PI/4.+salt+Beat*.1);
-  scene = min(scene, sdBox(p, paperSize));
-
-  return scene;
-}
-
 float sdStairs (vec3 p) {
-    return max(abs(p.x)-1., abs(p.y + 1. + floor(p.z) * .2)-.2);
+	float stairs = max(abs(p.x)-1., abs(p.y + 1. + floor(p.z) * .2)-.2);
+	stairs = max(stairs, -(p.y + p.z * .2 + 1.));
+	stairs = max(stairs, p.z-aDoor);
+    return stairs;
 }
 
 float sdPaper (vec3 pos) {
     pos.z -= 1.;
+		float door = 1.-smoothstep(aDoor - 3., aDoor, pos.z) * (1.-smoothstep(aDoor, aDoor + 3., pos.z));
+		pos.z -= Beat * 2.;
     float id = floor(pos.z);
-    pos.y += id * .2 + .35 + sin(id+Beat) * .3;
-    pos.x += sin(id+Beat*2.+sin(pos.y+Beat))*.3;
+    pos.y += min(id, aDoor) * .2 + .35 + min(Beat, aDoor+1.) * .4 + sin(id+Beat) * .3 * door;
+		pos.y -= anim(aDoor, 1.);
+    // pos.y += id * .2 + .35 + Beat * .4 + sin(id+Beat) * .3;
+    pos.x += sin(id+Beat*2.+sin(pos.y+Beat))*.3*door;
     pos.z = repeat(pos.z, 1.);
     vec3 p = pos;
     float d = sin(pos.x*2. - Beat);
+		// p.y -= door * 2.5;
+		vec3 pp = p;
     p.xz *= rot(d*.9);
     p.yz *= rot(d*2.6+id);
-    return max(0.,max(abs(p.y),max(abs(p.x)-.1, abs(p.z)-.1)));
+    float paper = max(0.,max(abs(p.y),max(abs(p.x)-.1, abs(p.z)-.1)));
+		paper = max(paper, id+4.);
+		return paper;
 }
 
 float sdLibrary (vec3 pos) {
   float scene = max(0., -abs(pos.x) + 1.5);
+	float a = 1.-anim(aLibraryIn, 20.);
+	pos.y += a * 50.;
+	pos.y -= 5.;
   // pos.y += sin(pos.z*.5 + Beat) * .5;
   vec3 id = vec3(floor(pos.yz),0);
+  pos.y += mix(1.,-1.,mod(id.y, 2.))*sin(Beat) * anim(aLibrarySwingIn, 5.);
   // pos.z += mix(1.,-1.,mod(id.x, 2.))*Beat;
-  vec3 p = pos;
+	vec3 p = pos;
+	p.y += id.y * .2;
+	float y = p.y;
+	id.x = floor(p.y);
   p.yz = repeat(p.yz, 1.);
   scene = max(scene, min(-abs(p.y) + .49, -abs(p.z) + .49));
   id.z = floor(pos.z/.1);
@@ -454,48 +270,90 @@ float sdLibrary (vec3 pos) {
   p = pos;
   p.z = repeat(p.z, .1);
   scene = min(scene, max(-abs(p.x) + 1.7 - offset, abs(p.z)-.04));
-	scene = max(scene, p.y + 100.);
+	scene = max(scene, abs(pos.x) - 2.);
+	scene = max(scene, y);
+	scene = max(scene, pos.z-aDoor);
   return scene;
 }
 
 float sdLamp (vec3 pos) {
   vec3 p = pos;
-  p.y -= 2. - floor(pos.z/4.) * .2*4.;
-  p.z = repeat(p.z, 4.);
-  float scene = max(sdist(p.xz, .01), -p.y);
-  scene = min(scene, sdSphere(p, .1));
+	float a = anim(aLampsIn, 5.);
+	float z = floor(pos.z/2.);
+  p.y -= 20. - 18. * a - z * .2*2.;
+  p.z = repeat(p.z, 2.);
+	p.y -= 10.;
+	p.xy *= rot(sin(Beat + z)*.07);
+	p.y += 10.;
+	p.xz *= rot(p.y * 8. + Beat);
+	float scene = sdist(p,.2);
+	amod(p.xz, 5.);
+	p.x -= max(.01, .19 * (1.-clamp(p.y*2., 0., 1.)));
+	scene = min(scene, max(sdist(p.xz, .01*a), -p.y));
+	scene = mix(10., scene, anim(aLampsIn, 1.));
+	scene = max(scene, pos.z - aDoor);
   return scene;
 }
 
 float sdDoor (vec3 pos) {
-  pos.z -= 2.;
-  pos.y += .5;
+  pos.z -= aDoor;
+  pos.y += .1 + aDoor*.2;
   vec3 p = pos;
-  float scene = max(abs(p.z) - .1, min(-abs(p.x)+1., -abs(p.y)+.5));
-  scene = max(scene, -sdist(p.xy-vec2(0.,.5), 1.));
+	p.x = abs(p.x) - .5;
+	p.x -= .5;
+	p.xz *= rot(.5+smoothstep(aDoor-2., aDoor + 2., Beat) * 1.5);
+	p.x += .5;
+	p.y -= .5;
+  float scene = sdBox(p, vec3(.5,1,.02));
+	scene = min(scene, max(sdist(p.xy-vec2(0,1.), .5), abs(p.z)-.02));
+	float x = p.x;
+	p.x = repeat(p.x, .2);
+	scene = max(scene, -abs(p.x)+.02);
+	p.x = x;
+	p.z += .04;
+	p.y = abs(p.y)-.775;
+	p.xy *= rot(-.1);
+	scene = min(scene, sdBox(p, vec3(.39,.1,.01)));
+	p.x = abs(p.x) - .2;
+	scene = min(scene, max(sdist(p.xy, .02), abs(p.z)-.04));
   return scene;
 }
 
-float map (vec3 p) {
-  p.xz *= rot(sin(p.z * .2) * .5);
-  p.y -= Beat * .2;
+vec2 map (vec3 pos) {
+	vec3 p = pos;
+	float door = 1. - anim(aDoor, 1.);
+  p.xz *= rot(sin(p.z * .2 + Beat) * .35);// * (1.-clamp(p.z/50.,0.,1.)) * door);
+  p.y -= min(Beat, aDoor) * .2;
   p.z += Beat;
-	return min(min(min(sdLamp(p), sdStairs(p)), sdPaper(p)), sdLibrary(p));
+	float paper = sdPaper(p);
+	float dist = 10.;
+	vec2 m = vec2(0);
+	if (p.z < aDoor + 2.) {
+		dist = min(min(min(sdLamp(p), sdStairs(p)), sdLibrary(p)), sdDoor(p));
+		m.y = step(dist, paper);
+	} else {
+		// pos.xz *= rot(Beat);
+		pos.y -= mix(0., 2.7, anim(aDoor+3., 1.));
+		dist = min(dist, mapRooms(pos+vec3(0,.25,0)));
+		m.y = step(dist, paper) * 2.;
+	}
+	m.x = min(paper, dist);
+	return m;
 }
 
 float hardShadow (vec3 pos, vec3 light) {
     vec3 dir = normalize(light - pos);
     float maxt = length(light - pos);
     float t = .05;
-    for (float i = 0.; i <= 1.; i += 1./30.) {
-        float dist = map(pos + dir * t);
-        if (dist < .001) return 0.;
+    for (float i = 0.; i <= 1.; i += 1./20.) {
+        float dist = map(pos + dir * t).x;
+        if (dist < .01) return 0.;
         t += dist;
         if (t >= maxt) break;
     }
     return 1.;
 }
-vec3 getNormal (vec3 p) { vec2 e = vec2(.001,0); return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx))); }
+vec3 getNormal (vec3 p) { vec2 e = vec2(.001,0); return normalize(vec3(map(p+e.xyy).x-map(p-e.xyy).x,map(p+e.yxy).x-map(p-e.yxy).x,map(p+e.yyx).x-map(p-e.yyx).x)); }
 
 vec3 getCamera (vec3 eye, vec3 lookAt, vec2 uv) {
   vec3 forward = normalize(lookAt - eye);
@@ -505,36 +363,57 @@ vec3 getCamera (vec3 eye, vec3 lookAt, vec2 uv) {
 }
 
 vec4 getLight (vec3 pos, vec3 eye, float ao) {
-  vec3 light = vec3(.1,1,-1);
+  vec3 light = vec3(.1,2,-1);
   vec3 normal = getNormal(pos);
   vec3 view = normalize(eye-pos);
-  float shade = ao;//dot(normal, view);
-  shade *= hardShadow(pos, light);
+  float shade = ao;// * dot(normal, view);
+  shade *= .3+.7*hardShadow(pos, light);
   shade = smoothstep(.0, .9, shade);
-  // shade = sqrt(shade);
+  shade = sqrt(shade);
   return vec4(vec3(shade),1.);
 }
 
 vec4 raymarch () {
   vec2 uv = (gl_FragCoord.xy-.5*synth_Resolution.xy)/synth_Resolution.y;
   float dither = rng(uv.xx+uv.yy);
-  vec3 eye = vec3(0,0,0);
-  vec3 ray = getCamera(eye, vec3(0,0,1), uv);
+  vec3 eye = vec3(0,1,-1);
+	vec3 target = vec3(0,0,1);
+	float door = smoothstep(aDoor, aDoor + 5., Beat);
+	float door2 = smoothstep(aDoor + 10., aDoor + 20., Beat);
+	float door3 = smoothstep(aDoor + 20., aDoor + 30., Beat);
+	target.y = mix(target.y, 1., door);
+	eye.y = mix(eye.y, 2., door3);
+	// target.xz *= rot(Beat * .1 * door);
+  vec3 ray = getCamera(eye, target, uv);
+	// ray.xz *= rot(-PI/4. * door2);
   vec3 pos = eye;
   float shade = 0.;
+	float total = 0.;
+	vec2 sdf;
   for (float i = 0.; i <= 1.; i += 1./100.) {
-    float dist = map(pos);
+    sdf = map(pos);
+		float dist = sdf.x;
 		if (dist < .001) {
 			shade = 1.-i;
 			break;
 		}
+		if (total > 100.) {
+			shade = 0.;
+			break;
+		}
+		total += dist;
     dist *= .5 + .1 * dither;
     pos += ray * dist;
   }
 
+	shade *= 1. - smoothstep(50., 99., total);
+	shade *= mix(1.-clamp(sdf.y,0.,1.), 1., anim(aFadeIn1, 5.));
+	shade *= mix(1., anim(aDoor + 4., 5.), step(1.5, sdf.y));
   return getLight(pos, eye, shade);
 }
 
 void main () {
-  gl_FragColor = raymarch();
+	vec4 color = raymarch();
+	color *= smoothstep(0.1, 1., Beat);
+  gl_FragColor = color;
 }
