@@ -27,26 +27,33 @@ Shape map (vec3 pos) {
   vec3 p = pos;
 
   float scene = 10.;
+  float lines = 10.;
   const float thin = .02;
-  const float radius = .1;
-  const float blend = .01;
-  const float count = 3.;
+  const float radius = .5;
+  const float count = 8.;
   float w = sin(time) * .5 + .5;
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
-    p = abs(p) - .4 * r * w;
-    // float d = sin(length(p) * 10.) * .5;
-    p.xz *= rot(PI/4. * w);
-    p.yz *= rot(PI/4. * w);
-    p.yx *= rot(PI/4. * w);
+    p = abs(p) - .2 * r;
+    float d = sin(length(p) * 10.) * .5;
+    p.xz *= rot(d + time*.9);
+    p.yz *= rot(d + time*.5);
+    p.yx *= rot(d + time*.1);
     // p.xz *= rot(time*.9564);
     // p.yz *= rot(time*.34665);
     // p.yx *= rot(time*.66354);
-    scene = smin(scene, sdist(p, radius * r), blend);
+    // scene = smin(scene, sdist(p, radius * r), blend);
     // scene = smin(scene, sdIso(p, .05 * r), .01);
-    scene = smin(scene, sdist(p.xz, thin * r + .04 * (1.-w)), blend);
+    // lines = smin(lines, sdist(p.xz, thin * r), .1);
+    lines = smin(lines, max(max(p.z,p.y), p.x), .05);
     // scene = smin(scene, sdist(p.xz, thin), blend);
   }
+
+  scene = min(scene, sdist(pos,1.));
+  scene = smax(scene, -lines, .3);
+  // scene = max(scene, -sdist(pos, 1.0));
+  // scene = min(scene, lines);
+  // scene = max(scene, sdist(pos, 1.5));
 
   Shape shape;
   shape.dist = scene;
@@ -61,7 +68,7 @@ vec3 getNormal (vec3 p) {
 void main () {
   vec2 uv = (gl_FragCoord.xy - .5 * resolution) / resolution.y;
   float dither = rand(uv);
-  vec3 eye = vec3(0,0,-3.5);
+  vec3 eye = vec3(0,0,-3.);
   // eye.xz *= rot(.2);
   // eye.yz *= rot(.2);
   eye.xz *= rot(iMouse.x * 2. - 1.);
@@ -71,14 +78,14 @@ void main () {
   vec3 pos = eye;
   float shade = 0.;
   Shape shape;
-  for (float s = 0.; s < 1.; s += 1. / 100.) {
+  for (float s = 0.; s < 1.; s += 1. / 50.) {
     shape = map(pos);
     float dist = shape.dist;
     if (dist < .001) {
       shade = 1. - s;
       break;
     }
-    dist *= .9 + .01 * dither;
+    dist *= .9 + .1 * dither;
     pos += ray * dist;
   }
   // float t = time + shade * 2.;//+ length(pos) * 10.;
