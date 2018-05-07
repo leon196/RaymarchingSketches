@@ -1,13 +1,7 @@
-// uniform float synth_Time;
-// uniform vec2 synth_Resolution;
-// uniform float BPM; //! slider[10, 100, 200]
-// #define time (synth_Time*BPM/120.)
-
 precision mediump float;
-#define synth_Resolution iResolution
-#define time (0.+mod(iGlobalTime,103.))
-// #define Beat (9.+sin(iGlobalTime))
-// #define Beat 54.
+
+#define iResolution iResolution
+#define time mod(iTime,103.)
 
 const float PI = 3.14159;
 const float TAU = 6.28318;
