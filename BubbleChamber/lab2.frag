@@ -27,18 +27,18 @@ Shape map (vec3 pos) {
   vec3 p = pos;
 
   float scene = 10.;
-  float lines = 10.;
+  // float lines = 10.;
   float lines2 = 10.;
-  const float thin = .02;
-  const float radius = .5;
+  // const float thin = .02;
+  // const float radius = .5;
   const float count = 8.;
-  float w = sin(time) * .5 + .5;
+  // float w = sin(time) * .5 + .5;
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
-    p = abs(p) - .1 * r;
-    float d = sin(length(p) * 10.) * .5;
-    p.xz *= rot(time*.9);
-    p.yz *= rot(time*.5);
+    p = abs(p) - .2 * r;
+    // float d = sin(length(p) * 10.) * .5;
+    p.xz *= rot(iMouse.x * TAU);
+    p.yz *= rot(iMouse.y * TAU);
     p.yx *= rot(time*.1);
     // p.xz *= rot(time*.9564);
     // p.yz *= rot(time*.34665);
@@ -48,13 +48,14 @@ Shape map (vec3 pos) {
     // lines = smin(lines, sdist(p.xz, thin * r), .1);
     // lines = smin(lines, max(max(p.z,p.y), p.x), .05);
     // lines2 = min(lines2, max(max(p.z,p.y), p.x));
-    lines2 = min(lines2, sdist(p, .01));
+    // lines2 = min(lines2, sdist(p, .01));
+    lines2 = min(lines2, p.x);
     // lines = min(lines, min(min(abs(p.z),abs(p.y)),abs(p.x)));
     // scene = smin(scene, sdist(p.xz, thin), blend);
   }
 
-  scene = min(scene, sdist(pos,.9));
-  scene = smax(scene, -lines2, .5);
+  scene = min(scene, sdist(pos,1.));
+  scene = smax(scene, -lines2, .1);
   // scene = max(scene, -sdist(pos, 1.0));
   // lines = max(lines, sdist(pos, 1.));
   // lines = max(lines, -sdist(pos, 1.));
@@ -74,10 +75,10 @@ void main () {
   vec2 uv = (gl_FragCoord.xy - .5 * resolution) / resolution.y;
   float dither = rand(uv);
   vec3 eye = vec3(0,0,-3.);
-  // eye.xz *= rot(.2);
-  // eye.yz *= rot(.2);
-  eye.xz *= rot(iMouse.x * 2. - 1.);
-  eye.yz *= rot(-(iMouse.y * 2. - 1.));
+  eye.xz *= rot(.5);
+  eye.yz *= rot(.5);
+  // eye.xz *= rot(iMouse.x * 2. - 1.);
+  // eye.yz *= rot(-(iMouse.y * 2. - 1.));
   vec3 target = vec3(0,0,0);
   vec3 ray = lookAt(eye, target, uv);
   vec3 pos = eye;
@@ -90,13 +91,13 @@ void main () {
       shade = 1. - s;
       break;
     }
-    dist *= .9 + .1 * dither;
+    // dist *= .9 + .1 * dither;
     pos += ray * dist;
   }
-  // float t = time + shade * 2.;//+ length(pos) * 10.;
-  // vec3 normal = getNormal(pos) * .5 + .5;
-  // vec3 color = vec3(.9) + vec3(.1) * cos(normal*t);
-  vec3 color = vec3(1);
+  float t = time + shade * 2.;//+ length(pos) * 10.;
+  vec3 normal = getNormal(pos) * .5 + .5;
+  vec3 color = normal;
+  // vec3 color = vec3(1);
   color *= shade;
   gl_FragColor = vec4(color, 1.);
 }
