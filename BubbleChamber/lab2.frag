@@ -28,32 +28,37 @@ Shape map (vec3 pos) {
 
   float scene = 10.;
   float lines = 10.;
+  float lines2 = 10.;
   const float thin = .02;
   const float radius = .5;
   const float count = 8.;
   float w = sin(time) * .5 + .5;
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
-    p = abs(p) - .2 * r;
+    p = abs(p) - .1 * r;
     float d = sin(length(p) * 10.) * .5;
-    p.xz *= rot(d + time*.9);
-    p.yz *= rot(d + time*.5);
-    p.yx *= rot(d + time*.1);
+    p.xz *= rot(time*.9);
+    p.yz *= rot(time*.5);
+    p.yx *= rot(time*.1);
     // p.xz *= rot(time*.9564);
     // p.yz *= rot(time*.34665);
     // p.yx *= rot(time*.66354);
     // scene = smin(scene, sdist(p, radius * r), blend);
     // scene = smin(scene, sdIso(p, .05 * r), .01);
     // lines = smin(lines, sdist(p.xz, thin * r), .1);
-    lines = smin(lines, max(max(p.z,p.y), p.x), .05);
+    // lines = smin(lines, max(max(p.z,p.y), p.x), .05);
+    // lines2 = min(lines2, max(max(p.z,p.y), p.x));
+    lines2 = min(lines2, sdist(p, .01));
+    // lines = min(lines, min(min(abs(p.z),abs(p.y)),abs(p.x)));
     // scene = smin(scene, sdist(p.xz, thin), blend);
   }
 
-  scene = min(scene, sdist(pos,1.));
-  scene = smax(scene, -lines, .3);
+  scene = min(scene, sdist(pos,.9));
+  scene = smax(scene, -lines2, .5);
   // scene = max(scene, -sdist(pos, 1.0));
-  // scene = min(scene, lines);
-  // scene = max(scene, sdist(pos, 1.5));
+  // lines = max(lines, sdist(pos, 1.));
+  // lines = max(lines, -sdist(pos, 1.));
+  // scene = min(scene, lines2);
 
   Shape shape;
   shape.dist = scene;
