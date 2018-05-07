@@ -10,6 +10,7 @@ float rand (vec2 seed) { return fract(sin(dot(seed*.1684,vec2(54.649,321.547)))*
 mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
 float amod (inout vec2 p, float count) { float an = TAU/count; float a = atan(p.y,p.x)+an/2.; float c = floor(a/an); c = mix(c,abs(c),step(count*.5,abs(c))); a = mod(a,an)-an/2.; p.xy = vec2(cos(a),sin(a))*length(p); return c; }
 float sdcyl (vec3 p, float r, float h) { return max(sdist(p.xz, r), abs(p.y)-h); }
+struct Shape { float dist, mat; };
 
 vec3 lookAt (vec3 o, vec3 t, vec2 uv) {
   vec3 forward = normalize(t - o);
@@ -18,7 +19,7 @@ vec3 lookAt (vec3 o, vec3 t, vec2 uv) {
   return normalize(forward * .6 + right * uv.x + up * uv.y);
 }
 
-float map (vec3 pos) {
+Shape map (vec3 pos) {
   vec3 p = pos;
   // p.yx *= rotate(time);
 
@@ -114,22 +115,27 @@ float map (vec3 pos) {
   // hole
   scene = max(scene, -sdist(pos, .95));
 
-  return scene;
+  Shape shape;
+  shape.dist = scene;
+  return shape;
 }
 
 void main () {
   vec2 uv = (gl_FragCoord.xy - .5 * resolution) / resolution.y;
   float dither = rand(uv);
-  vec3 eye = vec3(0,0.2,-1.5);
+  vec3 eye = vec3(0,0,-2);
   //eye.z += sin(time * .3) * .5;
-  //eye.xz *= rot(time * .2);
+  eye.xz *= rot(iMouse.x);
+  eye.yz *= rot(-iMouse.y);
   //eye.y += sin(time * .3) * .25;
   vec3 target = vec3(0,-.3,0);
   vec3 ray = lookAt(eye, target, uv);
   vec3 pos = eye;
   float shade = 0.;
+  Shape shape;
   for (float s = 0.; s < 1.; s += 1. / 50.) {
-    float dist = map(pos);
+    shape = map(pos);
+    float dist = shape.dist;
     if (dist < .001) {
       shade = 1. - s;
       break;
