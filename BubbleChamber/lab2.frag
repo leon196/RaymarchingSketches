@@ -41,7 +41,7 @@ Shape map (vec3 pos) {
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
     p = abs(p) - .2 * r;
-    float d = 0.;//length(p);//sin(length(p) * 20.) * .1;
+    float d = length(p)*2.;//sin(length(p) * 20.) * .1;
     p.yz *= rot(d + mouse.y * TAU);
     p.xz *= rot(d + mouse.x * TAU);
     p.yx *= rot(d + time*.1);
@@ -53,21 +53,21 @@ Shape map (vec3 pos) {
     // lines = smin(lines, sdist(p.xz, thin * r), .1);
     // lines = smin(lines, max(max(p.z,p.y), p.x), .05);
     // lines2 = min(lines2, max(max(p.z,p.y), p.x));
-    lines2 = min(lines2, max(p.z,p.y));
+    // lines2 = min(lines2, max(p.z,p.y));
     // lines2 = min(lines2, sdist(p.xy, .001));
     // lines2 = smin(lines2, sdist(p.xy, .001), .05);
     // lines2 = min(lines2, p.x);
-    // vec3 pp = p;
+    vec3 pp = p;
     // pp.x = repeat(pp.x, .05);
-    // lines2 = smin(lines2, sdist(pp, .2 * r), .01);
+    lines2 = smin(lines2, sdist(pp, .1 * r), .01);
     // lines2 = smin(lines2, sdIso(pp, .2 * r), .1);
     // lines = min(lines, min(min(abs(p.z),abs(p.y)),abs(p.x)));
     // scene = smin(scene, sdist(p.xz, thin), blend);
   }
 
   // scene = smax(sdist(pos,1.), -lines2, .01);
-  scene = max(sdist(pos,1.), -lines2);
-  // scene = min(scene, lines2);
+  // scene = max(sdist(pos,1.), -lines2);
+  scene = min(scene, lines2);
   // scene = max(scene, -sdist(pos, 1.0));
   // lines = max(lines, sdist(pos, 1.));
   // lines = max(lines, -sdist(pos, 1.));
