@@ -41,7 +41,8 @@ Shape map (vec3 pos) {
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
     p = abs(p) - .2 * r;
-    float d = length(p)*2.;//sin(length(p) * 20.) * .1;
+  //  float d = length(p)*2.;//sin(length(p) * 20.) * .1;
+    float d = 0;
     p.yz *= rot(d + mouse.y * TAU);
     p.xz *= rot(d + mouse.x * TAU);
     p.yx *= rot(d + time*.1);
