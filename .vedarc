@@ -5,5 +5,5 @@
         },
     },
     "vertexMode": "LINES",
-    "pixelRatio": 2,
+    "pixelRatio": 1,
 }
