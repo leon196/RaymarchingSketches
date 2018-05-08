@@ -1,14 +1,14 @@
 precision mediump float;
-// #define resolution iResolution
-// #define time iGlobalTime
-// #define mouse iMouse
+#define resolution iResolution
+#define time iGlobalTime
+#define mouse iMouse
 #define PI 3.14158
 #define TAU (2.*PI)
 #define repeat(p,c) (mod(p+c/2.,c)-c/2.)
 #define sdist(p,r) (length(p)-r)
 
-uniform float time;
-uniform vec2 resolution, mouse;
+// uniform float time;
+// uniform vec2 resolution, mouse;
 
 float rand (vec2 seed) { return fract(sin(dot(seed*.1684,vec2(54.649,321.547)))*450315.); }
 mat2 rot (float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
@@ -35,17 +35,17 @@ Shape map (vec3 pos) {
   float lines2 = 10.;
   // const float thin = .02;
   // const float radius = .5;
-  const float count = 4.;
+  const float count = 8.;
   // float w = sin(time) * .5 + .5;
   // p = p / dot(p,p) / 2.;
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
-    p = abs(p) - .4 * r;
+    p = abs(p) - .2 * r;
     float d = length(p)*4.;//sin(length(p) * 20.) * .1;
     //float d = 0.;
-    p.yz *= rot(d + mouse.y * TAU);
-    p.xz *= rot(d + mouse.x * TAU);
-    p.yx *= rot(d + time*.1);
+    p.yz *= rot(r * mouse.y * TAU);
+    p.xz *= rot(r * mouse.x * TAU);
+    p.yx *= rot(r * time*.1);
     // p.xz *= rot(time*.9564);
     // p.yz *= rot(time*.34665);
     // p.yx *= rot(time*.66354);
@@ -54,20 +54,21 @@ Shape map (vec3 pos) {
     // lines = smin(lines, sdist(p.xz, thin * r), .1);
     // lines = smin(lines, max(max(p.z,p.y), p.x), .05);
     // lines2 = min(lines2, max(max(p.z,p.y), p.x));
-    // lines2 = min(lines2, max(p.z,p.y));
-    // lines2 = min(lines2, sdist(p.xy, .001));
+    lines2 = min(lines2, max(p.z,p.y));
+    // lines2 = min(lines2, sdist(p.xy, .1));
+    // lines2 = min(lines2, sdist(p.xy, .1));
     // lines2 = smin(lines2, sdist(p.xy, .001), .05);
     // lines2 = min(lines2, p.x);
-    vec3 pp = p;
+    // vec3 pp = p;
     // pp.x = repeat(pp.x, .05);
-    lines2 = smin(lines2, sdist(pp.xy, .2 * r), .1);
+    // lines2 = smin(lines2, sdist(pp.xy, .2 * r), .1);
     // lines2 = smin(lines2, sdIso(pp, .2 * r), .1);
     // lines = min(lines, min(min(abs(p.z),abs(p.y)),abs(p.x)));
     // scene = smin(scene, sdist(p.xz, thin), blend);
   }
 
-  scene = smax(sdist(pos,1.), -lines2, .1);
-  // scene = max(sdist(pos,1.), -lines2);
+  // scene = smax(sdist(pos,1.), -lines2, .1);
+  scene = max(sdist(pos,1.), -lines2);
   // scene = min(scene, lines2);
   // scene = max(scene, -sdist(pos, 1.0));
   // lines = max(lines, sdist(pos, 1.));
