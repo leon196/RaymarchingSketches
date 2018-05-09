@@ -24,7 +24,7 @@ vec3 lookAt (vec3 o, vec3 t, vec2 uv) {
   vec3 forward = normalize(t - o);
   vec3 right = normalize(cross(forward, vec3(0,1,0)));
   vec3 up = normalize(cross(right, forward));
-  return normalize(forward * 8. + right * uv.x + up * uv.y);
+  return normalize(forward + right * uv.x + up * uv.y);
 }
 
 Shape map (vec3 pos) {
@@ -41,15 +41,15 @@ Shape map (vec3 pos) {
   for (float s = 0.; s < count; ++s) {
     float r = 1. - s / count;
     r *= r;
-    p = abs(p) - .15 * r;
-    // float d = length(p)*4.;//sin(length(p) * 20.) * .1;
+    p = abs(p) - .2 * r;
+    float d = length(p)*2.;//sin(length(p) * 20.) * .1;
     //float d = 0.;
     // p.yz *= rot(mouse.y * TAU);
     // p.xz *= rot(mouse.x * TAU);
-    float t = time  * r;
-    p.xz *= rot(t * .9651);
-    p.yx *= rot(t * .6654);
-    p.yz *= rot(t * .3658);
+    float t = time;
+    p.xz *= rot(t+d);
+    p.yx *= rot(t+d);
+    p.yz *= rot(t+d);
     // p.xz *= rot(time*.9564);
     // p.yz *= rot(time*.34665);
     // p.yx *= rot(time*.66354);
@@ -60,9 +60,9 @@ Shape map (vec3 pos) {
     // lines2 = min(lines2, max(max(p.z,p.y), p.x));
     // lines2 = min(lines2, max(p.z,p.y));
     // lines2 = min(lines2, p.x);
-    lines2 = min(lines2, sdist(p.xy, .001));
+    // lines2 = min(lines2, sdist(p.xy, .01));
     // lines2 = min(lines2, sdist(p, .1));
-    // lines2 = smin(lines2, sdist(p.xy, .001), .05);
+    lines2 = smin(lines2, sdist(p.xy, .001), .02);
     // lines2 = min(lines2, abs(p.x)-.001);
     // vec3 pp = p;
     // pp.x = repeat(pp.x, .1);
@@ -73,8 +73,8 @@ Shape map (vec3 pos) {
   }
 
   // scene = smax(sdist(pos,1.), lines2, .3);
-  // scene = max(sdist(pos,.5), lines2);
-  scene = min(scene, lines2);
+  scene = max(sdist(pos,.5), lines2);
+  // scene = min(scene, lines2);
   // scene = max(scene, -sdist(pos, 1.0));
   // lines = max(lines, sdist(pos, 1.));
   // lines = max(lines, -sdist(pos, 1.));
@@ -85,14 +85,14 @@ Shape map (vec3 pos) {
 }
 
 vec3 getNormal (vec3 p) {
-  vec2 e = vec2(.001,0);
+  vec2 e = vec2(.0001,0);
   return normalize(vec3(map(p+e.xyy).dist-map(p-e.xyy).dist, map(p+e.yxy).dist-map(p-e.yxy).dist, map(p+e.yyx).dist-map(p-e.yyx).dist));
 }
 
 void main () {
   vec2 uv = (gl_FragCoord.xy - .5 * resolution) / resolution.y;
   float dither = rand(uv);
-  vec3 eye = vec3(0,0,-5.);
+  vec3 eye = vec3(0,0,-1.2);
   eye.xz *= rot(.5);
   eye.yz *= rot(.5);
   // eye.xz *= rot(mouse.x * 2. - 1.);
@@ -105,18 +105,26 @@ void main () {
   for (float s = 0.; s < 1.; s += 1. / 50.) {
     shape = map(pos);
     float dist = shape.dist;
-    if (dist < .001) {
+    if (dist < .0001) {
+      // shade += .01;
       shade = 1. - s;
       break;
     }
+    // if (shade >= 1.) break;
     // dist *= .9 + .1 * dither;
     // dist *= .1;
+    // dist = max(.001, dist);
     pos += ray * dist;
   }
   float t = time + shade * 2.;//+ length(pos) * 10.;
   vec3 normal = getNormal(pos) * .5 + .5;
-  vec3 color = normal;
-  // vec3 color = vec3(1);
+  // vec3 color = normal;
+  vec3 color = vec3(1);
+  // shade /= shade;
   color *= shade;
+  // color = mix(vec3(1), vec3(0), shade);
+  // float lod = 8.;
+  // color = floor(color * lod) / lod;
+  // color = vec3(1) * smoothstep(.1, 1., 1.-shade);
   gl_FragColor = vec4(color, 1.);
 }
